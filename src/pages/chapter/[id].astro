@@ -1,0 +1,19 @@
+---
+// src/pages/chapter/[id].astro
+import ChapterImages from "../../components/ChapterImages.jsx";
+
+const { id } = Astro.params; // Obtener el ID del capítulo de la URL
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Capítulo Detalles</title>
+  </head>
+  <body class="bg-gray-100 p-6">
+    <!-- Renderizar la isla de React -->
+    {id && <ChapterImages chapterId={id} client:load />}
+  </body>
+</html>

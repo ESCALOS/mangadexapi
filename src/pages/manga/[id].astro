@@ -1,0 +1,131 @@
+---
+import axios from "axios";
+import type { MangaData } from "../../types/manga.d.ts";
+import type { ChapterData } from "../../types/chapter.d.ts"; // Define tipos para los capítulos si aún no los tienes
+
+const baseUrl = "https://api.mangadex.org";
+const uploadUrl = "https://uploads.mangadex.org/covers";
+const { id } = Astro.params; // Obtener el ID de la URL
+
+// Fetch manga data by ID
+let manga: MangaData | null = null;
+let coverImage = "default-cover.jpg"; // Imagen de portada por defecto
+try {
+  const response = await axios.get(`${baseUrl}/manga/${id}`);
+  manga = response.data.data;
+
+  // Obtener información de la portada desde la relación 'cover_art'
+  const coverRelationship = manga?.relationships.find(
+    (rel) => rel.type === "cover_art"
+  );
+
+  if (coverRelationship) {
+    const coverId = coverRelationship.id;
+    try {
+      const coverResp = await axios.get(`${baseUrl}/cover/${coverId}`);
+      const fileName = coverResp.data.data.attributes.fileName;
+      const coverSize = "512"; // Puedes ajustar el tamaño aquí
+      coverImage = `${uploadUrl}/${id}/${fileName}.${coverSize}.jpg`;
+    } catch (error) {
+      console.error(`Error fetching cover data for id ${coverId}:`, error);
+    }
+  }
+} catch (error) {
+  console.error(`Error fetching manga details for id ${id}:`, error);
+}
+
+// Fetch chapters in Spanish
+let chapters: ChapterData[] = [];
+try {
+  const chaptersResp = await axios.get(`${baseUrl}/chapter`, {
+    params: {
+      manga: id,
+      translatedLanguage: ["es", "es-la"], // Filtros para capítulos en español
+      order: { chapter: "desc" }, // Ordenar capítulos de forma ascendente
+      limit: 20,
+    },
+  });
+  chapters = chaptersResp.data.data;
+} catch (error) {
+  console.error("Error fetching chapter data:", error);
+}
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{manga?.attributes.title.en || "Detalles del Manga"}</title>
+  </head>
+  <body class="bg-gray-100 p-6">
+    <div class="max-w-7xl mx-auto flex gap-6">
+      <!-- Portada -->
+      <div class="flex-shrink-0">
+        <img
+          class="w-64 h-auto rounded"
+          src={coverImage}
+          alt={`Cover of ${manga?.attributes.title.en}`}
+        />
+      </div>
+      <!-- Información del Manga -->
+      <div class="flex-grow">
+        <h1 class="text-4xl font-bold mb-2">{manga?.attributes.title.en}</h1>
+        <p class="text-sm text-gray-500 mb-4">{manga?.type}</p>
+        <p class="text-md font-semibold mb-4">
+          Estado: {manga?.attributes.status}
+        </p>
+        <!-- Tags -->
+        <div class="mb-4">
+          <h2 class="text-xl font-semibold mb-2">Tags:</h2>
+          <ul class="flex flex-wrap gap-2">
+            {
+              manga?.attributes.tags.map((tag) => (
+                <li class="bg-gray-200 text-gray-700 px-2 py-1 rounded">
+                  {tag.attributes.name.en}
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+        <!-- Sinopsis -->
+        <div class="mb-4">
+          <h2 class="text-xl font-semibold mb-2">Sinopsis:</h2>
+          <p class="text-gray-700">
+            {
+              manga?.attributes.description["es"] ||
+                manga?.attributes.description["en"] ||
+                "Sin sinopsis disponible."
+            }
+          </p>
+        </div>
+
+        <!-- Lista de Capítulos -->
+        <div>
+          <h2 class="text-xl font-semibold mb-2">Capítulos en Español:</h2>
+          <ul class="list-disc pl-6">
+            {
+              chapters.length > 0 ? (
+                chapters.map((chapter) => (
+                  <li class="mb-2">
+                    <a
+                      href={`/chapter/${chapter.id}`}
+                      class="text-blue-500 hover:underline"
+                    >
+                      Capítulo {chapter.attributes.chapter} -{" "}
+                      {chapter.attributes.title || "Sin título"}
+                    </a>
+                  </li>
+                ))
+              ) : (
+                <p class="text-gray-500">
+                  No hay capítulos disponibles en español.
+                </p>
+              )
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

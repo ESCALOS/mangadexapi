@@ -1,0 +1,41 @@
+---
+const { title, coverImage, id, publicationDemographic, type } = Astro.props as {
+  title: string;
+  coverImage: string;
+  id: string;
+  publicationDemographic?: string;
+  type: string;
+};
+---
+
+<a
+  href={`/manga/${id}`}
+  class="block max-w-sm rounded overflow-hidden shadow-lg bg-white hover:shadow-xl transition-shadow duration-300"
+  title={title}
+>
+  <!-- Title with background color -->
+  <div class="bg-blue-600 text-white px-6 py-4">
+    <h1 class="font-bold text-xl line-clamp-1">{title}</h1>
+  </div>
+
+  <!-- Image section -->
+  <div class="relative w-full h-96 overflow-hidden">
+    <img
+      class="absolute inset-0 w-full h-full object-cover"
+      src={coverImage}
+      alt={`Cover image of ${title}`}
+    />
+  </div>
+
+  <!-- Flex container for rating and type -->
+  <div class="px-6 py-4 flex justify-between items-center">
+    <div class="text-gray-700">
+      <span class="font-bold">Demo:</span>
+      {publicationDemographic || "No tiene"}
+    </div>
+    <div class="text-gray-700">
+      <span class="font-bold">Type:</span>
+      {type}
+    </div>
+  </div>
+</a>

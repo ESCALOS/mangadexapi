@@ -1,0 +1,91 @@
+---
+import axios from "axios";
+import MangaCard from "../components/MangaCard.astro";
+import type { MangaData } from "../types/manga.d.ts";
+
+const baseUrl = "https://api.mangadex.org";
+const uploadUrl = "https://uploads.mangadex.org/covers";
+const title = "konosuba";
+
+// Fetch manga data
+let mangas: MangaData[] = [];
+try {
+  const mangaResp = await axios.get(`${baseUrl}/manga`, {
+    params: { title, availableTranslatedLanguage: ["es"] },
+  });
+  mangas = mangaResp.data.data;
+} catch (error) {
+  console.error("Error fetching manga data:", error);
+}
+
+// Function to fetch cover filename by cover id
+const getCoverFileName = async (coverId: string): Promise<string | null> => {
+  try {
+    const coverResp = await axios.get(`${baseUrl}/cover/${coverId}`);
+    return coverResp.data.data.attributes.fileName;
+  } catch (error) {
+    console.error(`Error fetching cover data for id ${coverId}:`, error);
+    return null;
+  }
+};
+
+// Map cover data to manga data and filter by available languages
+const mangaList = await Promise.all(
+  mangas.map(async (manga) => {
+    // Find the relationship of type 'cover_art'
+    const coverRelationship = manga.relationships.find(
+      (rel) => rel.type === "cover_art"
+    );
+
+    let coverImage = "default-cover.jpg"; // Default image
+
+    if (coverRelationship) {
+      const fileName = await getCoverFileName(coverRelationship.id);
+
+      // Construct the cover image URL with a specific size (e.g., 512)
+      const coverSize = "512"; // or "256" for smaller size
+      coverImage = fileName
+        ? `${uploadUrl}/${manga.id}/${fileName}.${coverSize}.jpg`
+        : coverImage;
+    }
+
+    return {
+      id: manga.id,
+      title: manga.attributes.title.en || "Unknown Title",
+      coverImage,
+      status: manga.attributes.status,
+      publicationDemographic: manga.attributes.publicationDemographic,
+      type: manga.type,
+    };
+  })
+);
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mangas en Español</title>
+    <link rel="stylesheet" href="/styles/global.css" />
+  </head>
+  <body class="bg-gray-100 p-6">
+    <h1 class="text-3xl font-bold mb-4">Mangas en Español</h1>
+    <div
+      class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+    >
+      {
+        mangaList.map((manga) => (
+          <MangaCard
+            title={manga.title}
+            coverImage={manga.coverImage}
+            id={manga.id}
+            type={manga.type}
+            status={manga.status}
+            publicationDemographic={manga.publicationDemographic}
+          />
+        ))
+      }
+    </div>
+  </body>
+</html>
